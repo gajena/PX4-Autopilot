@@ -45,7 +45,27 @@ ActuatorEffectivenessRoverAckermann::getEffectivenessMatrix(Configuration &confi
 	}
 
 	configuration.addActuator(ActuatorType::MOTORS, Vector3f{}, Vector3f{1.f, 0.f, 0.f});
+	_motors = 1u << 0;
 	configuration.addActuator(ActuatorType::SERVOS, Vector3f{0.f, 0.f, 1.f}, Vector3f{});
 	return true;
+}
+
+void ActuatorEffectivenessRoverAckermann::updateSetpoint(const matrix::Vector<float, NUM_AXES> &control_sp,
+		int matrix_index, ActuatorVector &actuator_sp, const matrix::Vector<float, NUM_ACTUATORS> &actuator_min,
+		const matrix::Vector<float, NUM_ACTUATORS> &actuator_max)
+{
+	// Stop motors when they are commanded 0 speed
+	for (int actuator_idx = 0; actuator_idx < NUM_ACTUATORS; actuator_idx++) {
+		const uint32_t motor_mask = (1u << actuator_idx);
+
+		if (_motors & motor_mask) {
+			if (fabsf(actuator_sp(actuator_idx)) < .01f) {
+				_stopped_motors |= motor_mask;
+
+			} else {
+				_stopped_motors &= ~motor_mask;
+			}
+		}
+	}
 }
 

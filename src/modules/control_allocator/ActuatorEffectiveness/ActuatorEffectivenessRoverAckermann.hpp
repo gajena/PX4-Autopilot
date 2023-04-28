@@ -43,6 +43,14 @@ public:
 
 	bool getEffectivenessMatrix(Configuration &configuration, EffectivenessUpdateReason external_update) override;
 
+	void updateSetpoint(const matrix::Vector<float, NUM_AXES> &control_sp, int matrix_index,
+			    ActuatorVector &actuator_sp, const matrix::Vector<float, NUM_ACTUATORS> &actuator_min,
+			    const matrix::Vector<float, NUM_ACTUATORS> &actuator_max) override;
+
+	uint32_t getStoppedMotors() const override { return _stopped_motors; }
+
 	const char *name() const override { return "Rover (Ackermann)"; }
 private:
+	uint32_t _motors{};
+	uint32_t _stopped_motors{};
 };
