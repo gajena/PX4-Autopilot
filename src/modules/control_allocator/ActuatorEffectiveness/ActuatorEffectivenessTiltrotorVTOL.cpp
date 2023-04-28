@@ -72,6 +72,7 @@ ActuatorEffectivenessTiltrotorVTOL::getEffectivenessMatrix(Configuration &config
 			    << configuration.num_actuators[(int)ActuatorType::MOTORS];
 
 	const bool mc_rotors_added_successfully = _mc_rotors.addActuators(configuration);
+	_motors = _mc_rotors.getMotors();
 
 	// Control Surfaces
 	configuration.selected_matrix = 1;
@@ -118,7 +119,6 @@ void ActuatorEffectivenessTiltrotorVTOL::updateSetpoint(const matrix::Vector<flo
 {
 	// apply tilt
 	if (matrix_index == 0) {
-
 		tiltrotor_extra_controls_s tiltrotor_extra_controls;
 
 		if (_tiltrotor_extra_controls_sub.copy(&tiltrotor_extra_controls)) {
@@ -151,6 +151,22 @@ void ActuatorEffectivenessTiltrotorVTOL::updateSetpoint(const matrix::Vector<flo
 				}
 			}
 		}
+
+		// Stop front tilted motors in fast forward flight when they are commanded 0 thrust
+		if (_flight_phase == FlightPhase::FORWARD_FLIGHT) {
+			for (int actuator_idx = 0; actuator_idx < NUM_ACTUATORS; actuator_idx++) {
+				const uint32_t motor_mask = (1u << actuator_idx);
+
+				if (_motors & ~_nontilted_motors & motor_mask) {
+					if (fabsf(actuator_sp(actuator_idx)) < .01f) {
+						_stopped_motors |= motor_mask;
+
+					} else {
+						_stopped_motors &= ~motor_mask;
+					}
+				}
+			}
+		}
 	}
 
 	// Set yaw saturation flag in case of yaw through tilt. As in this case the yaw actuation is decoupled from
@@ -180,7 +196,7 @@ void ActuatorEffectivenessTiltrotorVTOL::setFlightPhase(const FlightPhase &fligh
 	// update stopped motors
 	switch (flight_phase) {
 	case FlightPhase::FORWARD_FLIGHT:
-		_stopped_motors = _nontilted_motors;
+		_stopped_motors |= _nontilted_motors;
 		break;
 
 	case FlightPhase::HOVER_FLIGHT:

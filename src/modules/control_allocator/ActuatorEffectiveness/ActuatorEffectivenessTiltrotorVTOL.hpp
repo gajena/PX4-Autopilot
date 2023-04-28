@@ -94,6 +94,7 @@ protected:
 	ActuatorEffectivenessControlSurfaces _control_surfaces;
 	ActuatorEffectivenessTilts _tilts;
 
+	uint32_t _motors{}; ///< all motors
 	uint32_t _nontilted_motors{}; ///< motors that are not tiltable
 	uint32_t _stopped_motors{}; ///< currently stopped motors
 
