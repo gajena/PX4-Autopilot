@@ -48,9 +48,10 @@ ActuatorEffectivenessCustom::getEffectivenessMatrix(Configuration &configuration
 		return false;
 	}
 
-	// motors
+	// Motors
 	_motors.enablePropellerTorque(false);
 	const bool motors_added_successfully = _motors.addActuators(configuration);
+	_motors_mask = _motors.getMotors();
 
 	// Torque
 	const bool torque_added_successfully = _torque.addActuators(configuration);
@@ -58,3 +59,21 @@ ActuatorEffectivenessCustom::getEffectivenessMatrix(Configuration &configuration
 	return (motors_added_successfully && torque_added_successfully);
 }
 
+void ActuatorEffectivenessCustom::updateSetpoint(const matrix::Vector<float, NUM_AXES> &control_sp,
+		int matrix_index, ActuatorVector &actuator_sp, const matrix::Vector<float, NUM_ACTUATORS> &actuator_min,
+		const matrix::Vector<float, NUM_ACTUATORS> &actuator_max)
+{
+	// Stop front facing motors when they are commanded 0 thrust
+	for (int actuator_idx = 0; actuator_idx < NUM_ACTUATORS; actuator_idx++) {
+		const uint32_t motor_mask = (1u << actuator_idx);
+
+		if (_motors_mask & motor_mask) {
+			if (fabsf(actuator_sp(actuator_idx)) < .01f) {
+				_stopped_motors |= motor_mask;
+
+			} else {
+				_stopped_motors &= ~motor_mask;
+			}
+		}
+	}
+}
